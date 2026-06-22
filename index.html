@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Stok Terpusat & Rekap Otomatis Online</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #0F172A;
+            --primary-light: #1E293B;
+            --accent-blue: #2563EB;
+            --accent-blue-hover: #1D4ED8;
+            --success: #10B981;
+            --success-hover: #059669;
+            --danger: #EF4444;
+            --danger-hover: #DC2626;
+            --warning: #F59E0B;
+            --warning-hover: #D97706;
+            --bg-body: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-main: #1E293B;
+            --text-muted: #64748B;
+            --border: #E2E8F0;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: var(--bg-body); 
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        @keyframes blink-red {
+            0% { background-color: #FEE2E2; }
+            50% { background-color: #FCA5A5; }
+            100% { background-color: #FEE2E2; }
+        }
+
+        .blink-stok-kritis td {
+            animation: blink-red 1.5s infinite;
+            color: #991B1B !important;
+        }
+
+        .login-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            padding: 20px;
+        }
+
+        .login-box { 
+            width: 100%;
+            max-width: 420px; 
+            background: var(--card-bg); 
+            padding: 40px 35px; 
+            border-radius: 24px; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+            text-align: center;
+        }
+
+        .babyboss-logo-container {
+            margin-bottom: 15px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .baby-avatar {
+            width: 84px;
+            height: 84px;
+            background: #FFE4E6;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 4px solid #FFF;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .baby-avatar::before {
+            content: '';
+            position: absolute;
+            top: 32px;
+            width: 64px;
+            height: 18px;
+            background: #111827;
+            border-radius: 4px 4px 8px 8px;
+            z-index: 2;
+        }
+
+        .baby-avatar::after {
+            content: '';
+            position: absolute;
+            top: 34px;
+            width: 8px;
+            height: 4px;
+            background: #4B5563;
+            z-index: 3;
+        }
+
+        .hair-tuft {
+            position: absolute;
+            top: -12px;
+            left: 32px;
+            width: 20px;
+            height: 16px;
+            background: #D97706;
+            border-radius: 100% 0% 100% 0%;
+            transform: rotate(-15deg);
+        }
+
+        .pacifier {
+            position: absolute;
+            bottom: 14px;
+            width: 14px;
+            height: 14px;
+            background: #3B82F6;
+            border-radius: 50%;
+            border: 2px solid white;
+            z-index: 1;
+        }
+
+        .logo-text-main {
+            font-size: 2.4rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -1px;
+            display: flex;
+            gap: 2px;
+            justify-content: center;
+        }
+
+        .text-blue { color: #1E3A8A; }
+        .text-gold { 
+            background: linear-gradient(45deg, #B45309, #D97706, #F59E0B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .system-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 5px;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        .login-box input { 
+            width: 100%; 
+            padding: 14px 18px; 
+            margin-bottom: 16px; 
+            border-radius: 12px;
+            font-size: 0.95rem;
+            border: 1px solid var(--border);
+            background-color: #F8FAFC;
+        }
+
+        .login-box input:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+            background-color: white;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+        }
+
+        .btn-login-premium { 
+            width: 100%;
+            padding: 14px 18px;
+            background: linear-gradient(90deg, #1E3A8A 0%, #3B82F6 100%);
+            color: white; 
+            border: none; 
+            font-weight: 600; 
+            cursor: pointer; 
+            border-radius: 12px;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-login-premium:hover { 
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.3);
+        }
+
+        .pro-navbar {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            font-size: 1.3rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo i { color: var(--warning); }
+        .nav-user-area { display: flex; align-items: center; gap: 20px; }
+
+        .user-pill {
+            background-color: var(--primary-light);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .user-pill strong { color: #FFF; }
+        .role-indicator { color: var(--warning); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+
+        .btn-logout-premium {
+            background: linear-gradient(135deg, var(--danger) 0%, #B91C1C 100%);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-logout-premium:hover {
+            background: #B91C1C;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(239, 68, 68, 0.3);
+        }
+
+        .container { max-width: 1400px; margin: 30px auto; padding: 0 20px; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 25px; margin-bottom: 30px; }
+
+        .pro-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .card-header-container h3, .card-header-container h2 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+        .card-header-container i { font-size: 1.4rem; color: var(--accent-blue); }
+
+        .pro-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .pro-form-group { position: relative; flex: 1; min-width: 180px; }
+        .pro-form-group i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.95rem; }
+
+        .pro-input, .pro-select { 
+            width: 100%;
+            padding: 12px 14px 12px 40px; 
+            border: 1px solid var(--border); 
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background-color: #F8FAFC;
+            font-family: inherit;
+        }
+
+        .pro-input:focus, .pro-select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            background-color: #FFF;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn-action-premium {
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+        }
+
+        .btn-pro-success { background-color: var(--success); color: white; }
+        .btn-pro-success:hover { background-color: var(--success-hover); }
+        .btn-pro-info { background-color: var(--accent-blue); color: white; }
+        .btn-pro-info:hover { background-color: var(--accent-blue-hover); }
+        .btn-pro-warning { background-color: var(--warning); color: #000; }
+        .btn-pro-warning:hover { background-color: var(--warning-hover); }
+        .btn-pro-secondary { background-color: var(--text-muted); color: white; }
+        .btn-pro-danger { background-color: var(--danger); color: white; }
+        .btn-pro-danger:hover { background-color: var(--danger-hover); }
+
+        .filter-flex-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            background: #F1F5F9;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .filter-inputs { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+
+        .table-responsive { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; }
+        th { background-color: #F1F5F9; color: #475569; font-weight: 700; padding: 14px 18px; border-bottom: 2px solid var(--border); }
+        td { padding: 14px 18px; border-bottom: 1px solid var(--border); background-color: white; }
+        tr:hover td { background-color: #F8FAFC; }
+
+        .badge-premium { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
+        .bg-badge-success { background-color: #D1FAE5; color: #065F46; }
+        .bg-badge-danger { background-color: #FEE2E2; color: #991B1B; }
+        .bg-badge-info { background-color: #DBEAFE; color: #1E40AF; }
+        .bg-badge-purple { background-color: #F3E8FF; color: #6B21A8; }
+
+        .btn-table-action { padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; }
+        .btn-table-edit { background-color: #FEF3C7; color: #92400E; }
+        .btn-table-delete { background-color: #FEE2E2; color: #991B1B; }
+
+        .admin-grid-layout { display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; margin-top: 15px; }
+
+        @media (max-width: 992px) {
+            .admin-grid-layout { grid-template-columns: 1fr; }
+            .pro-form { flex-direction: column; align-items: stretch; }
+        }
+
+        .loading-text { color: var(--accent-blue); font-weight: 600; display: none; align-items: center; gap: 6px; }
+        
+        .widget-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .widget-box { background: white; padding: 15px 20px; border-radius: 12px; border-left: 5px solid var(--accent-blue); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); border-left-width: 5px; }
+        .widget-title { font-size: 0.8rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+        .widget-value { font-size: 1.6rem; font-weight: 800; margin-top: 5px; display: flex; align-items: baseline; gap: 5px; }
+    </style>
+</head>
+<body>
+
+<div id="loginPage" class="login-wrapper">
+    <div class="login-box">
+        <div class="babyboss-logo-container">
+            <div class="baby-avatar">
+                <div class="hair-tuft"></div>
+                <div class="pacifier"></div>
+            </div>
+            <h1 class="logo-text-main">
+                <span class="text-blue">BABY</span><span class="text-gold">BOSS</span>
+            </h1>
+            <div class="system-subtitle">Online Inventory System</div>
+        </div>
+        <form id="formLogin" onsubmit="prosesLogin(event)" style="width: 100%;">
+            <input type="text" id="loginUsername" placeholder="Username / ID User" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+            <button type="submit" class="btn-login-premium"><i class="fa-solid fa-right-to-bracket"></i> MASUK KE SISTEM</button>
+        </form>
+    </div>
+</div>
+
+<div id="mainPage" style="display: none;">
+    <nav class="pro-navbar">
+        <div class="nav-logo"><i class="fa-solid fa-cubes-stacked"></i> <span>BABYBOSS <span style="font-weight:300; font-size:1rem; opacity:0.8;">PRO+ INVENTORY</span></span></div>
+        <div class="nav-user-area">
+            <div class="user-pill">
+                <i class="fa-solid fa-circle-user" style="color: var(--accent-blue);"></i>
+                <span>User: <strong id="namaUserAktif">Nama User</strong> <span id="roleBadge" class="role-indicator"></span></span>
+            </div>
+            <button class="btn-logout-premium" onclick="prosesLogout()"><i class="fa-solid fa-power-off"></i> Keluar</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-grid">
+            
+            <div class="pro-card">
+                <div class="card-header-container">
+                    <i class="fa-solid fa-square-plus" style="color:var(--success);"></i>
+                    <h2>Manajemen Input Rekap Stok Barang Terpusat</h2>
+                </div>
+                <form id="stokForm" class="pro-form">
+                    <input type="hidden" id="editRowId" value="-1">
+                    
+                    <div class="pro-form-group">
+                        <i class="fa-solid fa-tag"></i>
+                        <select id="kategoriBarang" class="pro-select" style="padding-left: 40px;" required>
+                            <option value="" disabled selected>Pilih Kategori...</option>
+                            <option value="Fashion">Fashion</option>
+                            <option value="Produk Umum">Produk Umum</option>
+                            <option value="Pernak Pernik">Pernak Pernik</option>
+                            <option value="Mainan">Mainan</option>
+                        </select>
+                    </div>
+
+                    <div class="pro-form-group">
+                        <i class="fa-solid fa-barcode"></i>
+                        <input type="text" id="kodeBarang" class="pro-input" placeholder="Kode Barang" onkeyup="cekStokRealTime()" required>
+                        <small id="infoStokRealTime" style="position: absolute; bottom: -18px; left: 5px; font-size: 0.75rem; font-weight: 700; color: var(--text-muted);"></small>
+                    </div>
+                    
+                    <div class="pro-form-group">
+                        <i class="fa-solid fa-box-open"></i>
+                        <input type="text" id="namaBarang" class="pro-input" placeholder="Nama Barang" required>
+                    </div>
+                    
+                    <div class="pro-form-group">
+                        <i class="fa-solid fa-arrow-up-9-1"></i>
+                        <input type="number" id="jumlahStok" class="pro-input" placeholder="Jumlah Kuantitas" required>
+                    </div>
+                    
+                    <div class="pro-form-group">
+                        <i class="fa-solid fa-layer-group"></i>
+                        <select id="status" class="pro-select" style="padding-left: 40px;">
+                            <option value="Stok Awal">Stok Awal / Masuk</option>
+                            <option value="Keluar">Barang Keluar</option>
+                        </select>
+                    </div>
+
+                    <div class="pro-form-group" style="min-width: 240px;">
+                        <i class="fa-solid fa-note-sticky"></i>
+                        <input type="text" id="memoBarang" class="pro-input" placeholder="Keterangan / Memo (Opsional)">
+                    </div>
+                    
+                    <button type="submit" id="btnSimpan" class="btn-action-premium btn-pro-success">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> <span id="textTombolSimpan">Tambah Data Online</span>
+                    </button>
+                    <button type="button" id="btnBatalEdit" class="btn-action-premium btn-pro-secondary" style="display: none;" onclick="resetFormInput()">Batal</button>
+                    
+                    <button type="button" id="btnSyncOffline" class="btn-action-premium btn-pro-danger" style="display: none;" onclick="sinkronisasiDataOffline()">
+                        <i class="fa-solid fa-triangle-exclamation fa-beat"></i> <span id="textSyncOffline">⚠️ 0 Data Tertunda (Offline)</span>
+                    </button>
+
+                    <span id="loadingForm" class="loading-text"><i class="fa-solid fa-spinner fa-spin"></i> Memproses...</span>
+                    
+                    <button type="button" class="btn-action-premium btn-pro-info" style="margin-left:auto;" onclick="exportKeExcel('tabelStok', 'Log_Transaksi_User')">
+                        <i class="fa-solid fa-file-excel"></i> Export Log
+                    </button>
+                </form>
+            </div>
+
+            <div class="pro-card">
+                <div class="filter-flex-box">
+                    <div class="filter-inputs">
+                        <i class="fa-solid fa-filter"></i>
+                        <strong>Filter Log:</strong>
+                        
+                        <select id="filterKategoriLog" class="pro-select" style="padding: 6px 12px; width:auto; background:white;" onchange="tampilkanDataLog()">
+                            <option value="Semua">Semua Kategori</option>
+                            <option value="Fashion">Fashion</option>
+                            <option value="Produk Umum">Produk Umum</option>
+                            <option value="Pernak Pernik">Pernak Pernik</option>
+                            <option value="Mainan">Mainan</option>
+                        </select>
+
+                        <select id="filterPetugas" class="pro-select" style="padding: 6px 12px; width:auto; background:white;" onchange="tampilkanDataLog()">
+                            <option value="Semua">Semua Petugas</option>
+                        </select>
+
+                        <select id="filterStatusLog" class="pro-select" style="padding: 6px 12px; width:auto; background:white;" onchange="tampilkanDataLog()">
+                            <option value="Semua">Semua Status</option>
+                            <option value="Stok Awal">Stok Awal / Masuk</option>
+                            <option value="Keluar">Barang Keluar</option>
+                        </select>
+
+                        <input type="text" id="cariLogBarang" class="pro-input" style="padding: 6px 12px; width:160px; background:white;" placeholder="Cari Kode/Nama..." onkeyup="tampilkanDataLog()">
+                    </div>
+                    <button class="btn-action-premium btn-pro-secondary" style="padding: 8px 14px;" onclick="muatDataDariCloud()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="tabelStok">
+                        <thead>
+                            <tr>
+                                <th>Waktu Input</th>
+                                <th>Kategori</th>
+                                <th>Kode Barang</th>
+                                <th>Nama Barang</th>
+                                <th>Jumlah</th>
+                                <th>Status</th>
+                                <th>Keterangan</th>
+                                <th>Petugas</th>
+                                <th class="no-export">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataStok"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="adminRekapPanel" class="pro-card" style="display: none; border-top: 4px solid var(--primary);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
+                    <div class="card-header-container" style="margin:0; border:none; padding:0;">
+                        <i class="fa-solid fa-chart-pie" style="color: var(--warning);"></i>
+                        <h3>📊 Rekap Akumulasi Stok Global</h3>
+                    </div>
+                    <button class="btn-action-premium btn-pro-warning" onclick="exportKeExcel('tabelRekapGlobal', 'Rekap_Stok_Global')">
+                        <i class="fa-solid fa-download"></i> Export Hasil Rekap
+                    </button>
+                </div>
+
+                <div class="widget-container">
+                    <div class="widget-box" style="border-left-color: var(--accent-blue);">
+                        <div class="widget-title">Total Varian Produk</div>
+                        <div id="wdgTotalVarian" class="widget-value">0</div>
+                    </div>
+                    <div class="widget-box" style="border-left-color: var(--success);">
+                        <div class="widget-title">Total Stok Masuk</div>
+                        <div id="wdgTotalMasuk" class="widget-value" style="color: var(--success);">0 <span style="font-size:1rem; font-weight:400; color:var(--text-muted);">pcs</span></div>
+                    </div>
+                    <div class="widget-box" style="border-left-color: var(--danger);">
+                        <div class="widget-title">Total Stok Keluar</div>
+                        <div id="wdgTotalKeluar" class="widget-value" style="color: var(--danger);">0 <span style="font-size:1rem; font-weight:400; color:var(--text-muted);">pcs</span></div>
+                    </div>
+                    <div class="widget-box" style="border-left-color: var(--warning);">
+                        <div class="widget-title">Kondisi Kritis (≤ 5)</div>
+                        <div id="wdgTotalKritis" class="widget-value" style="color: var(--warning);">0 <span style="font-size:1rem; font-weight:400; color:var(--text-muted);">varian</span></div>
+                    </div>
+                </div>
+
+                <div class="filter-flex-box" style="background: #E2E8F0;">
+                    <div class="filter-inputs" style="width: 100%;">
+                        <i class="fa-solid fa-sliders"></i>
+                        <strong>Filter Menu Rekap:</strong>
+                        
+                        <select id="filterKategoriRekap" class="pro-select" style="padding: 6px 12px; width:auto; background:white;" onchange="hitungDanTampilkanRekapGlobal()">
+                            <option value="Semua">Semua Kategori</option>
+                            <option value="Fashion">Fashion</option>
+                            <option value="Produk Umum">Produk Umum</option>
+                            <option value="Pernak Pernik">Pernak Pernik</option>
+                            <option value="Mainan">Mainan</option>
+                        </select>
+
+                        <input type="text" id="cariRekapBarang" class="pro-input" style="padding: 6px 12px; width:180px; background:white;" placeholder="Cari Kode atau Nama..." onkeyup="hitungDanTampilkanRekapGlobal()">
+                        
+                        <select id="filterStokKritis" class="pro-select" style="padding: 6px 12px; width:auto; background:white;" onchange="hitungDanTampilkanRekapGlobal()">
+                            <option value="Semua">Semua Kondisi Stok</option>
+                            <option value="Menipis">Hanya Stok Menipis (≤ 5)</option>
+                            <option value="Habis">Hanya Stok Habis (≤ 0)</option>
+                        </select>
+
+                        <select id="filterStokMasukRange" class="pro-select" style="padding: 6px 12px; width:auto; background:white;" onchange="hitungDanTampilkanRekapGlobal()">
+                            <option value="Semua">Semua Total Masuk</option>
+                            <option value="Banyak">Total Masuk > 50 pcs</option>
+                            <option value="Sedikit">Total Masuk ≤ 50 pcs</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="tabelRekapGlobal">
+                        <thead>
+                            <tr style="background-color: #0F172A;">
+                                <th style="color:white;">Kategori</th>
+                                <th style="color:white;">Kode Barang</th>
+                                <th style="color:white;">Nama Barang</th>
+                                <th style="color:white;">Total Masuk</th>
+                                <th style="color:white;">Total Keluar</th>
+                                <th style="color:white;">Sisa Stok Akhir</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataRekapGlobal"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="adminControlPanel" class="pro-card" style="display: none; background: #FFFDF5; border: 1px solid #FDE68A;">
+                <div class="card-header-container">
+                    <i class="fa-solid fa-shield-halved" style="color: var(--danger);"></i>
+                    <h3>🛡️ Panel Kontrol Akun Staff</h3>
+                </div>
+                <div class="admin-grid-layout">
+                    <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+                        <h4>Tambah / Ubah Password</h4>
+                        <form id="userManagementForm" onsubmit="simpanUserbaru(event)" style="display: flex; flex-direction: column; gap: 12px;">
+                            <input type="text" id="newUsername" class="pro-input" style="padding-left:14px;" placeholder="Username Baru" required>
+                            <input type="text" id="newPassword" class="pro-input" style="padding-left:14px;" placeholder="Password Baru" required>
+                            <button type="submit" id="btnSimpanUser" class="btn-action-premium btn-pro-info" style="justify-content: center;">Simpan Ke Cloud</button>
+                        </form>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+                        <h4>Daftar Akses Terdaftar</h4>
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr><th>Username</th><th>Password</th><th>Aksi</th></tr></thead>
+                                <tbody id="daftarUserTabel"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyr5Dcw5okXmWWxayDOQQt_Iy2q75pf5ZmNmSxlVVJl4LJKEIIc9KoXyUTWBHLEZY-L/exec";
+
+    const userDefault = { "admin": { password: "admin1234", role: "Admin BabyBoss" } };
+    let basisDataUser = JSON.parse(localStorage.getItem('basisDataUser')) || userDefault;
+    let daftarStok = [];
+    let currentUser = localStorage.getItem('currentUser') || "";
+    let sisaStokPerBarangGlobal = {};
+    let pemilikPertamaProduk = {}; // [TAMBAHAN LOGIKA] Untuk melacak pemilik awal barang berdasarkan Kode Barang
+    
+    // Array antrean penampung data offline baru
+    let antreanOffline = JSON.parse(localStorage.getItem('antreanOffline_BabyBoss')) || [];
+
+    muatDataUserDariCloud();
+    cekStatusTombolOffline();
+
+    function cekStatusLogin() {
+        if (currentUser) {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainPage').style.display = 'block';
+            document.getElementById('namaUserAktif').innerText = currentUser;
+            
+            const roleUser = basisDataUser[currentUser] ? basisDataUser[currentUser].role : "Staff";
+            document.getElementById('roleBadge').innerText = `(${roleUser})`;
+
+            if (currentUser === "admin") {
+                document.getElementById('adminControlPanel').style.display = 'block';
+                document.getElementById('adminRekapPanel').style.display = 'block';
+                tampilkanDaftarUserAdmin();
+            } else {
+                document.getElementById('adminControlPanel').style.display = 'none';
+                document.getElementById('adminRekapPanel').style.display = 'none';
+            }
+            muatDataDariCloud();
+        } else {
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('mainPage').style.display = 'none';
+        }
+    }
+
+    function prosesLogin(e) {
+        e.preventDefault();
+        const user = document.getElementById('loginUsername').value.trim().toLowerCase();
+        const pass = document.getElementById('loginPassword').value;
+        if (basisDataUser[user] && basisDataUser[user].password === pass) {
+            localStorage.setItem('currentUser', user);
+            currentUser = user;
+            document.getElementById('formLogin').reset();
+            cekStatusLogin();
+        } else { alert("Username atau Password salah!"); }
+    }
+
+    function prosesLogout() {
+        if(confirm("Keluar dari sistem?")) {
+            localStorage.removeItem('currentUser');
+            currentUser = "";
+            cekStatusLogin();
+        }
+    }
+
+    function muatDataUserDariCloud() {
+        if(WEB_APP_URL.includes("URL_WEB_APP")) { cekStatusLogin(); return; }
+        fetch(`${WEB_APP_URL}?get=users`)
+        .then(res => res.json())
+        .then(data => {
+            if(data && Object.keys(data).length > 0) {
+                basisDataUser = data;
+                localStorage.setItem('basisDataUser', JSON.stringify(basisDataUser));
+            }
+            cekStatusLogin();
+        }).catch(() => cekStatusLogin());
+    }
+
+    function muatDataDariCloud() {
+        if(WEB_APP_URL.includes("URL_WEB_APP")) return;
+        fetch(`${WEB_APP_URL}?_=${new Date().getTime()}`)
+        .then(res => res.json())
+        .then(data => {
+            daftarStok = data;
+            kalkulasiSisaStokGlobal();
+            perbaruiDropdownFilter();
+            tampilkanDataLog();
+            hitungDanTampilkanRekapGlobal();
+        }).catch(() => {
+            console.log("Gagal memuat data cloud terbaru. Berjalan dalam mode cache.");
+        });
+    }
+
+    function kalkulasiSisaStokGlobal() {
+        sisaStokPerBarangGlobal = {};
+        pemilikPertamaProduk = {}; // Reset tracking pemilik produk
+
+        // Iterasi berurutan dari data lama ke baru untuk mencari penginput pertama
+        daftarStok.forEach(item => {
+            const kode = (item.kode || "").trim().toUpperCase();
+            if(!kode) return;
+
+            // [TAMBAHAN LOGIKA] Daftarkan siapa user pertama yang membuat kode barang ini
+            if(!pemilikPertamaProduk[kode] && item.petugas) {
+                pemilikPertamaProduk[kode] = item.petugas.replace(" (Edited)", "").trim().toLowerCase();
+            }
+
+            if(!sisaStokPerBarangGlobal[kode]) sisaStokPerBarangGlobal[kode] = 0;
+            
+            const qty = parseInt(item.jumlah) || 0;
+            if(item.status === "Keluar") sisaStokPerBarangGlobal[kode] -= qty;
+            else sisaStokPerBarangGlobal[kode] += qty;
+        });
+    }
+
+    function cekStokRealTime() {
+        const kode = document.getElementById('kodeBarang').value.trim().toUpperCase();
+        const infoLabel = document.getElementById('infoStokRealTime');
+        const btnSimpan = document.getElementById('btnSimpan');
+        
+        if(!kode) {
+            infoLabel.innerText = "";
+            btnSimpan.disabled = false;
+            return;
+        }
+        
+        if(sisaStokPerBarangGlobal[kode] !== undefined) {
+            const sisa = sisaStokPerBarangGlobal[kode];
+            const pemilik = pemilikPertamaProduk[kode] || "";
+
+            // [TAMBAHAN LOGIKA] Validasi hak input secara Real-Time ketika mengetik kode barang
+            if (currentUser !== "admin" && pemilik !== currentUser.toLowerCase()) {
+                infoLabel.innerText = `⚠️ Terkunci! Produk ini didaftarkan oleh staff: ${pemilik.toUpperCase()}. Anda hanya bisa melihat.`;
+                infoLabel.style.color = "var(--danger)";
+                btnSimpan.disabled = true; // Lock tombol simpan untuk user lain
+                return;
+            }
+
+            btnSimpan.disabled = false;
+            infoLabel.innerText = `Sisa Stok Saat Ini: ${sisa} pcs`;
+            if(sisa <= 0) infoLabel.style.color = "var(--danger)";
+            else if(sisa <= 5) infoLabel.style.color = "var(--warning)";
+            else infoLabel.style.color = "var(--success)";
+        } else {
+            btnSimpan.disabled = false;
+            infoLabel.innerText = "Produk Baru (Belum ada riwayat stok)";
+            infoLabel.style.color = "var(--accent-blue)";
+        }
+    }
+
+    // MANAJEMEN INPUT DENGAN PROTEKSI EMERGENCY OFFLINE SAVING
+    document.getElementById('stokForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const rowId = document.getElementById('editRowId').value;
+        const kategori = document.getElementById('kategoriBarang').value;
+        const kode = document.getElementById('kodeBarang').value.trim().toUpperCase();
+        const nama = document.getElementById('namaBarang').value.trim();
+        const jumlah = parseInt(document.getElementById('jumlahStok').value);
+        const status = document.getElementById('status').value;
+        const memo = document.getElementById('memoBarang').value.trim();
+        const waktu = new Date().toLocaleString('id-ID');
+
+        // [TAMBAHAN LOGIKA] Validasi pengaman lapis kedua saat form disubmit (mencegah bypass tombol enter)
+        const pemilik = pemilikPertamaProduk[kode];
+        if (currentUser !== "admin" && pemilik && pemilik !== currentUser.toLowerCase()) {
+            alert(`⚠️ Akses Ditolak: Anda tidak berhak menambah/mengurangi produk ini. Produk ini hanya dapat diubah oleh admin atau staff "${pemilik.toUpperCase()}" selaku pemilik data.`);
+            return;
+        }
+
+        if(status === "Keluar") {
+            const sisaSkrg = sisaStokPerBarangGlobal[kode] || 0;
+            if(rowId === "-1" && jumlah > sisaSkrg) {
+                alert(`⚠️ GAGAL: Jumlah barang keluar (${jumlah} pcs) melebihi sisa stok gudang yang tersedia (${sisaSkrg} pcs).`);
+                return;
+            }
+        }
+
+        document.getElementById('loadingForm').style.display = 'inline-flex';
+        document.getElementById('btnSimpan').disabled = true;
+
+        let payload = { waktu, kode, nama, jumlah, status, petugas: currentUser, kategori, memo };
+        
+        if (rowId === "-1") { payload.action = "tambah"; } 
+        else { payload.action = "edit"; payload.rowId = rowId; payload.petugas = currentUser + " (Edited)"; }
+
+        fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify(payload) })
+        .then(res => res.json())
+        .then(() => { resetFormInput(); muatDataDariCloud(); })
+        .catch(() => {
+            // JIKA INTERNET PUTUS, JALANKAN LOGIKA PENYELAMATAN DATA OFFLINE DISINI
+            if(payload.action === "tambah") {
+                antreanOffline.push(payload);
+                localStorage.setItem('antreanOffline_BabyBoss', JSON.stringify(antreanOffline));
+                alert("⚠️ Jaringan Internet Terputus! Data Anda BERHASIL DIAMANKAN di memori lokal browser. Silakan klik tombol merah 'Sinkronisasi Data' jika internet sudah menyala.");
+                resetFormInput();
+                cekStatusTombolOffline();
+            } else {
+                alert("Gagal mengedit data. Mode edit membutuhkan koneksi internet stabil.");
+                document.getElementById('loadingForm').style.display = 'none';
+                document.getElementById('btnSimpan').disabled = false;
+            }
+        });
+    });
+
+    // Fungsi Baru: Cek Ketersediaan Antrean Data Offline
+    function cekStatusTombolOffline() {
+        const btn = document.getElementById('btnSyncOffline');
+        const txt = document.getElementById('textSyncOffline');
+        if(antreanOffline.length > 0) {
+            txt.innerText = `⚠️ Kirim ${antreanOffline.length} Data Tertunda (Offline)`;
+            btn.style.display = 'inline-flex';
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+
+    // Fungsi Baru: Kirim Massal Data Tertunda yang tersimpan saat internet mati
+    async function sinkronisasiDataOffline() {
+        if(WEB_APP_URL.includes("URL_WEB_APP")) return;
+        if(!confirm(`Kirim ${antreanOffline.length} data transaksi tertunda ke server cloud sekarang?`)) return;
+
+        document.getElementById('loadingForm').style.display = 'inline-flex';
+        let suksesCount = 0;
+        let salinanAntrean = [...antreanOffline];
+
+        for(let i = 0; i < salinanAntrean.length; i++) {
+            try {
+                let res = await fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify(salinanAntrean[i]) });
+                if(res.ok) { suksesCount++; }
+            } catch(e) {
+                console.error("Gagal sinkronisasi baris ke-" + i);
+                break; // Hentikan perulangan jika di tengah jalan internet putus kembali
+            }
+        }
+
+        // Buang data yang sukses dikirim dari antrean lokal
+        antreanOffline.splice(0, suksesCount);
+        localStorage.setItem('antreanOffline_BabyBoss', JSON.stringify(antreanOffline));
+        
+        alert(`Berhasil mensinkronisasi ${suksesCount} data ke Google Sheets Cloud!`);
+        document.getElementById('loadingForm').style.display = 'none';
+        cekStatusTombolOffline();
+        muatDataDariCloud();
+    }
+
+    function persiapkanEdit(rowId, kode, nama, jumlah, status, kategori, memo) {
+        document.getElementById('editRowId').value = rowId;
+        document.getElementById('kategoriBarang').value = kategori || "";
+        document.getElementById('kodeBarang').value = kode;
+        document.getElementById('namaBarang').value = nama;
+        document.getElementById('jumlahStok').value = jumlah;
+        document.getElementById('status').value = status;
+        document.getElementById('memoBarang').value = memo || "";
+        
+        document.getElementById('textTombolSimpan').innerText = "Simpan Perubahan";
+        document.getElementById('btnSimpan').style.background = "var(--warning)";
+        document.getElementById('btnSimpan').style.color = "black";
+        document.getElementById('btnBatalEdit').style.display = 'inline-flex';
+        cekStokRealTime();
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function hapusDataOnline(rowId) {
+        if (!confirm("Hapus permanen data dari cloud?")) return;
+        document.getElementById('loadingForm').style.display = 'inline-flex';
+        fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: "hapus", rowId }) })
+        .then(() => muatDataDariCloud())
+        .catch(() => alert("Gagal menghapus data."));
+    }
+
+    function resetFormInput() {
+        document.getElementById('editRowId').value = "-1";
+        document.getElementById('stokForm').reset();
+        document.getElementById('textTombolSimpan').innerText = "Tambah Data Online";
+        document.getElementById('btnSimpan').style.background = "var(--success)";
+        document.getElementById('btnSimpan').style.color = "white";
+        document.getElementById('btnBatalEdit').style.display = 'none';
+        document.getElementById('loadingForm').style.display = 'none';
+        document.getElementById('btnSimpan').disabled = false;
+        document.getElementById('infoStokRealTime').innerText = "";
+    }
+
+    function perbaruiDropdownFilter() {
+        const select = document.getElementById('filterPetugas');
+        const nilaiDipilih = select.value;
+        let daftarPetugas = [];
+        daftarStok.forEach(item => {
+            if(item.petugas && !daftarPetugas.includes(item.petugas)) daftarPetugas.push(item.petugas);
+        });
+        select.innerHTML = '<option value="Semua">Semua Petugas</option>';
+        daftarPetugas.sort().forEach(p => { select.innerHTML += `<option value="${p}">${p}</option>`; });
+        select.value = nilaiDipilih;
+    }
+
+    function tampilkanDataLog() {
+        const tbody = document.getElementById('dataStok');
+        const filterKategori = document.getElementById('filterKategoriLog').value;
+        const filterPetugas = document.getElementById('filterPetugas').value;
+        const filterStatus = document.getElementById('filterStatusLog').value;
+        const kataKunci = document.getElementById('cariLogBarang').value.toLowerCase().trim();
+        
+        tbody.innerHTML = "";
+        if (daftarStok.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Tidak ada data riwayat stok cloud.</td></tr>';
+            return;
+        }
+
+        let dataDitemukan = false;
+
+        for (let i = daftarStok.length - 1; i >= 0; i--) {
+            const item = daftarStok[i];
+            
+            if (filterKategori !== "Semua" && item.kategori !== filterKategori) continue;
+            if (filterPetugas !== "Semua" && item.petugas !== filterPetugas) continue;
+            if (filterStatus !== "Semua" && item.status !== filterStatus) continue;
+
+            const matchKode = item.kode ? item.kode.toLowerCase().includes(kataKunci) : false;
+            const matchNama = item.nama ? item.nama.toLowerCase().includes(kataKunci) : false;
+            if (kataKunci !== "" && !matchKode && !matchNama) continue;
+
+            dataDitemukan = true;
+            const kelasBadge = item.status === "Keluar" ? "bg-badge-danger" : "bg-badge-success";
+            
+            // [TAMBAHAN LOGIKA] Tombol edit/hapus di dalam tabel log mengikuti aturan kepemilikan data
+            const petugasAsli = item.petugas ? item.petugas.replace(" (Edited)", "").trim().toLowerCase() : "";
+            const isAuthorized = (currentUser === "admin" || petugasAsli === currentUser.toLowerCase());
+            
+            const tombolAksi = isAuthorized ? `
+                <button class="btn-table-action btn-table-edit" onclick="persiapkanEdit(${item.rowId}, '${item.kode}', '${item.nama}', ${item.jumlah}, '${item.status}', '${item.kategori || ''}', '${item.memo || ''}')"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button class="btn-table-action btn-table-delete" onclick="hapusDataOnline(${item.rowId})"><i class="fa-solid fa-trash-can"></i></button>
+            ` : `<span style="font-size:0.8rem; color:var(--text-muted);">No Access</span>`;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${item.waktu || '-'}</td>
+                    <td><span class="badge-premium bg-badge-purple">${item.kategori || 'Umum'}</span></td>
+                    <td><strong>${item.kode}</strong></td>
+                    <td>${item.nama}</td>
+                    <td><strong>${Number(item.jumlah).toLocaleString('id-ID')}</strong> pcs</td>
+                    <td><span class="badge-premium ${kelasBadge}">${item.status}</span></td>
+                    <td style="font-style: italic; color: var(--text-muted); font-size:0.85rem;">${item.memo || '-'}</td>
+                    <td>${item.petugas}</td>
+                    <td class="no-export">${tombolAksi}</td>
+                </tr>
+            `;
+        }
+        if(!dataDitemukan) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Data tidak ditemukan.</td></tr>';
+    }
+
+    function hitungDanTampilkanRekapGlobal() {
+        const tbody = document.getElementById('dataRekapGlobal');
+        const filterKategori = document.getElementById('filterKategoriRekap').value;
+        const kataKunciRekap = document.getElementById('cariRekapBarang').value.toLowerCase().trim();
+        const filterKritis = document.getElementById('filterStokKritis').value;
+        const filterMasukRange = document.getElementById('filterStokMasukRange').value;
+        
+        tbody.innerHTML = "";
+        let rekap = {};
+
+        let totalVarian = 0;
+        let akumulasiMasuk = 0;
+        let akumulasiKeluar = 0;
+        let akumulasiKritis = 0;
+
+        daftarStok.forEach(item => {
+            const kode = item.kode;
+            if (!rekap[kode]) {
+                rekap[kode] = { nama: item.nama, masuk: 0, keluar: 0, kategori: item.kategori || 'Produk Umum' };
+            }
+            const qty = parseInt(item.jumlah) || 0;
+            if (item.status === "Keluar") rekap[kode].keluar += qty;
+            else rekap[kode].masuk += qty;
+        });
+
+        const keys = Object.keys(rekap);
+        if (keys.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Belum ada akumulasi sisa stok.</td></tr>';
+            perbaruiKomponenWidget(0, 0, 0, 0);
+            return;
+        }
+
+        let barisDitampilkan = false;
+
+        keys.sort().forEach(kode => {
+            const barang = rekap[kode];
+            const sisaStok = barang.masuk - barang.keluar;
+            
+            if (filterKategori !== "Semua" && barang.kategori !== filterKategori) return;
+
+            const cocokKode = kode.toLowerCase().includes(kataKunciRekap);
+            const cocokNama = barang.nama ? barang.nama.toLowerCase().includes(kataKunciRekap) : false;
+            if (kataKunciRekap !== "" && !cocokKode && !cocokNama) return;
+
+            if (filterKritis === "Menipis" && sisaStok > 5) return;
+            if (filterKritis === "Habis" && sisaStok > 0) return;
+
+            if (filterMasukRange === "Banyak" && barang.masuk <= 50) return;
+            if (filterMasukRange === "Sedikit" && barang.masuk > 50) return;
+
+            totalVarian++;
+            akumulasiMasuk += barang.masuk;
+            akumulasiKeluar += barang.keluar;
+            if(sisaStok <= 5) akumulasiKritis++;
+
+            barisDitampilkan = true;
+            const kelasBlinkKritis = sisaStok <= 5 ? 'blink-stok-kritis' : '';
+            const styleSisaAngka = sisaStok <= 0 ? 'color: #991B1B; font-weight: 800;' : (sisaStok <= 5 ? 'color: #B45309; font-weight: 800;' : 'color: var(--success); font-weight: 800;');
+
+            tbody.innerHTML += `
+                <tr class="${kelasBlinkKritis}">
+                    <td><span class="badge-premium bg-badge-info">${barang.kategori}</span></td>
+                    <td><strong>${kode}</strong></td>
+                    <td>${barang.nama}</td>
+                    <td style="color: #059669;">+ ${barang.masuk.toLocaleString('id-ID')}</td>
+                    <td style="color: #DC2626;">- ${barang.keluar.toLocaleString('id-ID')}</td>
+                    <td style="${styleSisaAngka}">
+                        ${sisaStok.toLocaleString('id-ID')} pcs 
+                        ${sisaStok <= 0 ? '<span class="badge-premium bg-badge-danger" style="font-size:0.65rem; padding:2px 6px; margin-left:5px;">HABIS</span>' : (sisaStok <= 5 ? '<span class="badge-premium" style="background:#FEF3C7; color:#92400E; font-size:0.65rem; padding:2px 6px; margin-left:5px;">LIMIT</span>' : '')}
+                    </td>
+                </tr>
+            `;
+        });
+
+        perbaruiKomponenWidget(totalVarian, akumulasiMasuk, akumulasiKeluar, akumulasiKritis);
+
+        if(!barisDitampilkan) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Tidak ada stok barang yang sesuai filter rekap.</td></tr>';
+    }
+
+    function perbaruiKomponenWidget(varian, masuk, keluar, kritis) {
+        if(currentUser !== "admin") return;
+        document.getElementById('wdgTotalVarian').innerText = varian.toLocaleString('id-ID');
+        document.getElementById('wdgTotalMasuk').innerHTML = `${masuk.toLocaleString('id-ID')} <span style="font-size:1rem; font-weight:400; color:var(--text-muted);">pcs</span>`;
+        document.getElementById('wdgTotalKeluar').innerHTML = `${keluar.toLocaleString('id-ID')} <span style="font-size:1rem; font-weight:400; color:var(--text-muted);">pcs</span>`;
+        document.getElementById('wdgTotalKritis').innerHTML = `${kritis.toLocaleString('id-ID')} <span style="font-size:1rem; font-weight:400; color:var(--text-muted);">varian</span>`;
+    }
+
+    function tampilkanDaftarUserAdmin() {
+        const tbody = document.getElementById('daftarUserTabel');
+        tbody.innerHTML = "";
+        Object.keys(basisDataUser).forEach(username => {
+            const user = basisDataUser[username];
+            const tombolHapus = username === "admin" ? `<span style="font-size:0.8rem; color:var(--text-muted); font-style:italic;">Protected Master</span>` : `<button class="btn-table-action btn-table-delete" onclick="hapusUserAkses('${username}')"><i class="fa-solid fa-user-minus"></i> Hapus</button>`;
+            tbody.innerHTML += `<tr><td><strong>${username}</strong></td><td><code>${user.password}</code></td><td>${tombolHapus}</td></tr>`;
+        });
+    }
+
+    function simpanUserbaru(e) {
+        e.preventDefault();
+        const usernameInput = document.getElementById('newUsername').value.trim().toLowerCase();
+        const passwordInput = document.getElementById('newPassword').value.trim();
+        if (!usernameInput || !passwordInput) return;
+        basisDataUser[usernameInput] = { password: passwordInput, role: "Staff Lapangan" };
+        localStorage.setItem('basisDataUser', JSON.stringify(basisDataUser));
+        kirimDataUserKeCloud();
+    }
+
+    function hapusUserAkses(username) {
+        if(username === "admin") return;
+        if (!confirm(`Hapus akses untuk user: "${username}"?`)) return;
+        delete basisDataUser[username];
+        localStorage.setItem('basisDataUser', JSON.stringify(basisDataUser));
+        kirimDataUserKeCloud();
+    }
+
+    function kirimDataUserKeCloud() {
+        if(WEB_APP_URL.includes("URL_WEB_APP")) { tampilkanDaftarUserAdmin(); document.getElementById('userManagementForm').reset(); return; }
+        document.getElementById('btnSimpanUser').disabled = true;
+        fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: "simpan_users", database: basisDataUser }) })
+        .then(() => { alert("User cloud disinkronkan!"); document.getElementById('userManagementForm').reset(); })
+        .finally(() => { document.getElementById('btnSimpanUser').disabled = false; tampilkanDaftarUserAdmin(); perbaruiDropdownFilter(); });
+    }
+
+    function exportKeExcel(idTabel, namaFile) {
+        const tabelAsal = document.getElementById(idTabel);
+        if(!tabelAsal || tabelAsal.rows.length <= 1) return;
+        const klonTabel = tabelAsal.cloneNode(true);
+        klonTabel.querySelectorAll('.no-export').forEach(el => el.remove());
+        const workbook = XLSX.utils.table_to_book(klonTabel, { sheet: "Sheet1", raw: true });
+        XLSX.writeFile(workbook, `${namaFile}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+</script>
+</body>
+</html>
