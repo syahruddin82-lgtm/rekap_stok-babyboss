@@ -718,11 +718,9 @@
 
     function kalkulasiSisaStokGlobal() {
         sisaStokPerBarangGlobal = {};
-
         daftarStok.forEach(item => {
             const kode = (item.kode || "").trim().toUpperCase();
             if(!kode) return;
-
             if(!sisaStokPerBarangGlobal[kode]) sisaStokPerBarangGlobal[kode] = 0;
             
             const qty = parseInt(item.jumlah) || 0;
@@ -734,19 +732,15 @@
     function cekStokRealTime() {
         const kode = document.getElementById('kodeBarang').value.trim().toUpperCase();
         const infoLabel = document.getElementById('infoStokRealTime');
-        const btnSimpan = document.getElementById('btnSimpan');
         
         if(!kode) {
             infoLabel.innerText = "";
-            btnSimpan.disabled = false;
             return;
         }
         
-        // [PERBAIKAN LOGIKA] Sekarang siapa pun bebas menginput kode barang yang sudah ada
-        btnSimpan.disabled = false;
         if(sisaStokPerBarangGlobal[kode] !== undefined) {
             const sisa = sisaStokPerBarangGlobal[kode];
-            infoLabel.innerText = `Sisa Stok Saat Ini (Global): ${sisa} pcs`;
+            infoLabel.innerText = `Sisa Stok Saat Ini: ${sisa} pcs`;
             if(sisa <= 0) infoLabel.style.color = "var(--danger)";
             else if(sisa <= 5) infoLabel.style.color = "var(--warning)";
             else infoLabel.style.color = "var(--success)";
@@ -765,7 +759,7 @@
         const nama = document.getElementById('namaBarang').value.trim();
         const jumlah = parseInt(document.getElementById('jumlahStok').value);
         const status = document.getElementById('status').value;
-        const memo = document.getElementById('memoBarang').value.trim();
+        let memo = document.getElementById('memoBarang').value.trim();
         const waktu = new Date().toLocaleString('id-ID');
 
         if(status === "Keluar") {
@@ -781,13 +775,24 @@
 
         let payload = { waktu, kode, nama, jumlah, status, petugas: currentUser, kategori, memo };
         
-        if (rowId === "-1") { payload.action = "tambah"; } 
-        else { payload.action = "edit"; payload.rowId = rowId; payload.petugas = currentUser + " (Edited)"; }
+        if (rowId === "-1") { 
+            payload.action = "tambah"; 
+        } else { 
+            payload.action = "edit"; 
+            payload.rowId = rowId; 
+            payload.petugas = currentUser; // Petugas murni tanpa tambahan teks agar tidak mengunci hak akses
+            
+            // Penanda edit dipindahkan secara rapi ke kolom memo/keterangan
+            if (!memo.toLowerCase().includes("(edited)")) {
+                payload.memo = memo ? memo + " (Edited)" : "(Edited)";
+            }
+        }
 
         fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify(payload) })
         .then(res => res.json())
         .then(() => { resetFormInput(); muatDataDariCloud(); })
         .catch(() => {
+            // JIKA INTERNET PUTUS, JALANKAN LOGIKA PENYELAMATAN DATA OFFLINE DISINI
             if(payload.action === "tambah") {
                 antreanOffline.push(payload);
                 localStorage.setItem('antreanOffline_BabyBoss', JSON.stringify(antreanOffline));
@@ -802,6 +807,7 @@
         });
     });
 
+    // Fungsi Baru: Cek Ketersediaan Antrean Data Offline
     function cekStatusTombolOffline() {
         const btn = document.getElementById('btnSyncOffline');
         const txt = document.getElementById('textSyncOffline');
@@ -813,6 +819,7 @@
         }
     }
 
+    // Fungsi Baru: Kirim Massal Data Tertunda yang tersimpan saat internet mati
     async function sinkronisasiDataOffline() {
         if(WEB_APP_URL.includes("URL_WEB_APP")) return;
         if(!confirm(`Kirim ${antreanOffline.length} data transaksi tertunda ke server cloud sekarang?`)) return;
@@ -827,10 +834,11 @@
                 if(res.ok) { suksesCount++; }
             } catch(e) {
                 console.error("Gagal sinkronisasi baris ke-" + i);
-                break;
+                break; // Hentikan perulangan jika di tengah jalan internet putus kembali
             }
         }
 
+        // Buang data yang sukses dikirim dari antrean lokal
         antreanOffline.splice(0, suksesCount);
         localStorage.setItem('antreanOffline_BabyBoss', JSON.stringify(antreanOffline));
         
@@ -917,15 +925,12 @@
 
             dataDitemukan = true;
             const kelasBadge = item.status === "Keluar" ? "bg-badge-danger" : "bg-badge-success";
-            
-            // [PERBAIKAN LOGIKA] Filter otorisasi: User hanya boleh mengedit baris transaksi yang diinput oleh dirinya sendiri
-            const petugasAsli = item.petugas ? item.petugas.replace(" (Edited)", "").trim().toLowerCase() : "";
-            const isAuthorized = (currentUser === "admin" || petugasAsli === currentUser.toLowerCase());
+            const isAuthorized = (currentUser === "admin" || item.petugas === currentUser);
             
             const tombolAksi = isAuthorized ? `
                 <button class="btn-table-action btn-table-edit" onclick="persiapkanEdit(${item.rowId}, '${item.kode}', '${item.nama}', ${item.jumlah}, '${item.status}', '${item.kategori || ''}', '${item.memo || ''}')"><i class="fa-solid fa-pen-to-square"></i></button>
                 <button class="btn-table-action btn-table-delete" onclick="hapusDataOnline(${item.rowId})"><i class="fa-solid fa-trash-can"></i></button>
-            ` : `<span style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-solid fa-lock"></i> Terkunci</span>`;
+            ` : `<span style="font-size:0.8rem; color:var(--text-muted);">No Access</span>`;
 
             tbody.innerHTML += `
                 <tr>
@@ -959,11 +964,8 @@
         let akumulasiKeluar = 0;
         let akumulasiKritis = 0;
 
-        // Di sini seluruh transaksi dikelompokkan berdasarkan Kode Barang untuk direkap di panel admin
         daftarStok.forEach(item => {
-            const kode = item.kode ? item.kode.trim().toUpperCase() : "";
-            if(!kode) return;
-            
+            const kode = item.kode;
             if (!rekap[kode]) {
                 rekap[kode] = { nama: item.nama, masuk: 0, keluar: 0, kategori: item.kategori || 'Produk Umum' };
             }
