@@ -637,7 +637,6 @@
     let daftarStok = [];
     let currentUser = localStorage.getItem('currentUser') || "";
     let sisaStokPerBarangGlobal = {};
-    let pemilikPertamaProduk = {}; // [TAMBAHAN LOGIKA] Untuk melacak pemilik awal barang berdasarkan Kode Barang
     
     // Array antrean penampung data offline baru
     let antreanOffline = JSON.parse(localStorage.getItem('antreanOffline_BabyBoss')) || [];
@@ -719,17 +718,10 @@
 
     function kalkulasiSisaStokGlobal() {
         sisaStokPerBarangGlobal = {};
-        pemilikPertamaProduk = {}; // Reset tracking pemilik produk
 
-        // Iterasi berurutan dari data lama ke baru untuk mencari penginput pertama
         daftarStok.forEach(item => {
             const kode = (item.kode || "").trim().toUpperCase();
             if(!kode) return;
-
-            // [TAMBAHAN LOGIKA] Daftarkan siapa user pertama yang membuat kode barang ini
-            if(!pemilikPertamaProduk[kode] && item.petugas) {
-                pemilikPertamaProduk[kode] = item.petugas.replace(" (Edited)", "").trim().toLowerCase();
-            }
 
             if(!sisaStokPerBarangGlobal[kode]) sisaStokPerBarangGlobal[kode] = 0;
             
@@ -750,25 +742,15 @@
             return;
         }
         
+        // [PERBAIKAN LOGIKA] Sekarang siapa pun bebas menginput kode barang yang sudah ada
+        btnSimpan.disabled = false;
         if(sisaStokPerBarangGlobal[kode] !== undefined) {
             const sisa = sisaStokPerBarangGlobal[kode];
-            const pemilik = pemilikPertamaProduk[kode] || "";
-
-            // [TAMBAHAN LOGIKA] Validasi hak input secara Real-Time ketika mengetik kode barang
-            if (currentUser !== "admin" && pemilik !== currentUser.toLowerCase()) {
-                infoLabel.innerText = `⚠️ Terkunci! Produk ini didaftarkan oleh staff: ${pemilik.toUpperCase()}. Anda hanya bisa melihat.`;
-                infoLabel.style.color = "var(--danger)";
-                btnSimpan.disabled = true; // Lock tombol simpan untuk user lain
-                return;
-            }
-
-            btnSimpan.disabled = false;
-            infoLabel.innerText = `Sisa Stok Saat Ini: ${sisa} pcs`;
+            infoLabel.innerText = `Sisa Stok Saat Ini (Global): ${sisa} pcs`;
             if(sisa <= 0) infoLabel.style.color = "var(--danger)";
             else if(sisa <= 5) infoLabel.style.color = "var(--warning)";
             else infoLabel.style.color = "var(--success)";
         } else {
-            btnSimpan.disabled = false;
             infoLabel.innerText = "Produk Baru (Belum ada riwayat stok)";
             infoLabel.style.color = "var(--accent-blue)";
         }
@@ -785,13 +767,6 @@
         const status = document.getElementById('status').value;
         const memo = document.getElementById('memoBarang').value.trim();
         const waktu = new Date().toLocaleString('id-ID');
-
-        // [TAMBAHAN LOGIKA] Validasi pengaman lapis kedua saat form disubmit (mencegah bypass tombol enter)
-        const pemilik = pemilikPertamaProduk[kode];
-        if (currentUser !== "admin" && pemilik && pemilik !== currentUser.toLowerCase()) {
-            alert(`⚠️ Akses Ditolak: Anda tidak berhak menambah/mengurangi produk ini. Produk ini hanya dapat diubah oleh admin atau staff "${pemilik.toUpperCase()}" selaku pemilik data.`);
-            return;
-        }
 
         if(status === "Keluar") {
             const sisaSkrg = sisaStokPerBarangGlobal[kode] || 0;
@@ -813,7 +788,6 @@
         .then(res => res.json())
         .then(() => { resetFormInput(); muatDataDariCloud(); })
         .catch(() => {
-            // JIKA INTERNET PUTUS, JALANKAN LOGIKA PENYELAMATAN DATA OFFLINE DISINI
             if(payload.action === "tambah") {
                 antreanOffline.push(payload);
                 localStorage.setItem('antreanOffline_BabyBoss', JSON.stringify(antreanOffline));
@@ -828,7 +802,6 @@
         });
     });
 
-    // Fungsi Baru: Cek Ketersediaan Antrean Data Offline
     function cekStatusTombolOffline() {
         const btn = document.getElementById('btnSyncOffline');
         const txt = document.getElementById('textSyncOffline');
@@ -840,7 +813,6 @@
         }
     }
 
-    // Fungsi Baru: Kirim Massal Data Tertunda yang tersimpan saat internet mati
     async function sinkronisasiDataOffline() {
         if(WEB_APP_URL.includes("URL_WEB_APP")) return;
         if(!confirm(`Kirim ${antreanOffline.length} data transaksi tertunda ke server cloud sekarang?`)) return;
@@ -855,11 +827,10 @@
                 if(res.ok) { suksesCount++; }
             } catch(e) {
                 console.error("Gagal sinkronisasi baris ke-" + i);
-                break; // Hentikan perulangan jika di tengah jalan internet putus kembali
+                break;
             }
         }
 
-        // Buang data yang sukses dikirim dari antrean lokal
         antreanOffline.splice(0, suksesCount);
         localStorage.setItem('antreanOffline_BabyBoss', JSON.stringify(antreanOffline));
         
@@ -947,14 +918,14 @@
             dataDitemukan = true;
             const kelasBadge = item.status === "Keluar" ? "bg-badge-danger" : "bg-badge-success";
             
-            // [TAMBAHAN LOGIKA] Tombol edit/hapus di dalam tabel log mengikuti aturan kepemilikan data
+            // [PERBAIKAN LOGIKA] Filter otorisasi: User hanya boleh mengedit baris transaksi yang diinput oleh dirinya sendiri
             const petugasAsli = item.petugas ? item.petugas.replace(" (Edited)", "").trim().toLowerCase() : "";
             const isAuthorized = (currentUser === "admin" || petugasAsli === currentUser.toLowerCase());
             
             const tombolAksi = isAuthorized ? `
                 <button class="btn-table-action btn-table-edit" onclick="persiapkanEdit(${item.rowId}, '${item.kode}', '${item.nama}', ${item.jumlah}, '${item.status}', '${item.kategori || ''}', '${item.memo || ''}')"><i class="fa-solid fa-pen-to-square"></i></button>
                 <button class="btn-table-action btn-table-delete" onclick="hapusDataOnline(${item.rowId})"><i class="fa-solid fa-trash-can"></i></button>
-            ` : `<span style="font-size:0.8rem; color:var(--text-muted);">No Access</span>`;
+            ` : `<span style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-solid fa-lock"></i> Terkunci</span>`;
 
             tbody.innerHTML += `
                 <tr>
@@ -988,8 +959,11 @@
         let akumulasiKeluar = 0;
         let akumulasiKritis = 0;
 
+        // Di sini seluruh transaksi dikelompokkan berdasarkan Kode Barang untuk direkap di panel admin
         daftarStok.forEach(item => {
-            const kode = item.kode;
+            const kode = item.kode ? item.kode.trim().toUpperCase() : "";
+            if(!kode) return;
+            
             if (!rekap[kode]) {
                 rekap[kode] = { nama: item.nama, masuk: 0, keluar: 0, kategori: item.kategori || 'Produk Umum' };
             }
